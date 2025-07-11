@@ -88,7 +88,7 @@ const handleRegister = async () => {
       <p class="mt-2 text-center text-sm text-gray-600">
         Ou
         <NuxtLink
-          to="/login"
+          to="/auth/login"
           class="font-medium text-primary-600 hover:text-primary-500"
         >
           entrar na sua conta existente

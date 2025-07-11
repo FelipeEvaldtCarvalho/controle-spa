@@ -17,7 +17,7 @@ onMounted(() => {
   if (isAuthenticated.value) {
     router.push("/dashboard");
   } else {
-    router.push("/login");
+    router.push("/auth/login");
   }
 });
 </script>

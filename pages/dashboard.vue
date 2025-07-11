@@ -71,7 +71,7 @@ const router = useRouter();
 const handleLogout = async () => {
   try {
     await logout();
-    await router.push("/login");
+    await router.push("/auth/login");
   } catch (err: unknown) {
     console.error("Erro ao fazer logout:", err);
   }
