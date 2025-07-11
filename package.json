@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "nuxt build",
-    "dev": "nuxt dev",
+    "dev": "nuxt dev --port 8182",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare"
@@ -18,9 +18,11 @@
     "@nuxt/test-utils": "3.19.2",
     "@nuxt/ui": "3.2.0",
     "@unhead/vue": "^2.0.3",
+    "axios": "^1.10.0",
     "eslint": "^9.0.0",
     "nuxt": "^3.17.6",
     "typescript": "^5.6.3",
+    "valibot": "^1.1.0",
     "vue": "^3.5.17",
     "vue-router": "^4.5.1"
   },
