@@ -61,6 +61,7 @@ export const useAuth = () => {
       if (accessToken) {
         localStorage.setItem("auth_token", accessToken);
       }
+      navigateTo("/dashboard");
     } catch {
       throw new Error("Erro ao criar conta");
     } finally {

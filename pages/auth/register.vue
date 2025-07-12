@@ -1,40 +1,51 @@
 <script setup lang="ts">
-import * as v from "valibot";
+import {
+  object,
+  string,
+  boolean,
+  pipe,
+  minLength,
+  email,
+  custom,
+} from "valibot";
 import type { FormSubmitEvent } from "@nuxt/ui";
-import { toast } from "#build/ui";
+import type { InferOutput } from "valibot";
 
 definePageMeta({
   middleware: ["guest"],
 });
 
-const schema = v.object({
-  name: v.pipe(
-    v.string(),
-    v.minLength(2, "Nome deve ter pelo menos 2 caracteres")
+const { register } = useAuth();
+const router = useRouter();
+const toast = useToast();
+
+const strongPasswordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+
+const schema = object({
+  name: pipe(string(), minLength(2, "Nome deve ter pelo menos 2 caracteres")),
+  email: pipe(string(), email("Email inválido")),
+  password: pipe(
+    string(),
+    minLength(8, "A senha deve ter pelo menos 8 caracteres"),
+    custom(
+      (value) => strongPasswordRegex.test(value as string),
+      "A senha deve conter pelo menos 1 letra maiúscula, 1 número e 1 caractere especial"
+    )
   ),
-  email: v.pipe(v.string(), v.email("Email inválido")),
-  password: v.pipe(
-    v.string(),
-    v.minLength(8, "A senha deve ter pelo menos 8 caracteres")
+  confirmPassword: pipe(
+    string(),
+    custom((value) => value === form.password, "Senhas não coincidem")
   ),
-  confirmPassword: v.pipe(
-    v.string(),
-    v.minLength(8, "A confirmação de senha deve ter pelo menos 8 caracteres")
-  ),
-  acceptTerms: v.pipe(
-    v.boolean(),
-    v.custom(
+  acceptTerms: pipe(
+    boolean(),
+    custom(
       (value) => !!value,
       "Você deve aceitar os termos de uso e política de privacidade"
     )
   ),
 });
 
-type Schema = v.InferOutput<typeof schema>;
-
-const { register } = useAuth();
-const router = useRouter();
-const toast = useToast();
+type Schema = InferOutput<typeof schema>;
 
 const form = reactive({
   name: "",
@@ -45,34 +56,21 @@ const form = reactive({
 });
 
 const loading = ref(false);
+const passwordShow = ref(false);
+const confirmPasswordShow = ref(false);
 
-const handleRegister = async () => {
+const handleRegister = async (event: FormSubmitEvent<Schema>) => {
+  const { name, email, password } = event.data;
   try {
     loading.value = true;
 
-    // Validação do formulário
-    const validationResult = v.validate(form, schema);
-
-    if (!validationResult.valid) {
-      toast.add({
-        title: "Erro de validação",
-        description: validationResult.errors[0].message,
-        color: "error",
-      });
-      return;
-    }
-
     await register({
-      name: form.name,
-      email: form.email,
-      password: form.password,
+      name,
+      email,
+      password,
     });
   } catch (err: unknown) {
-    const errorMessage =
-      err instanceof Error
-        ? err.message
-        : "Erro ao criar conta. Tente novamente.";
-    error.value = errorMessage;
+    console.error("Erro ao registrar:", err);
   } finally {
     loading.value = false;
   }
@@ -97,62 +95,74 @@ const handleRegister = async () => {
     </div>
 
     <UCard class="mt-8">
-      <form class="space-y-6" @submit.prevent="handleRegister">
-        <div>
-          <UForm label="Nome completo" name="name" :schema="schema">
-            <UInput
-              v-model="form.name"
-              type="text"
-              placeholder="Seu nome completo"
-              required
-              autocomplete="name"
-            />
-          </UForm>
-        </div>
+      <UForm
+        :schema="schema"
+        :state="form"
+        class="space-y-6"
+        @submit.prevent="handleRegister"
+      >
+        <UFormField label="Nome da Loja" name="name" class="w-full">
+          <UInput v-model="form.name" class="w-full" autocomplete="name" />
+        </UFormField>
+        <UFormField label="Email" name="email" class="w-full">
+          <UInput v-model="form.email" class="w-full" autocomplete="email" />
+        </UFormField>
+        <UFormField label="Senha" name="password" class="w-full">
+          <UInput
+            v-model="form.password"
+            class="w-full"
+            :type="passwordShow ? 'text' : 'password'"
+            autocomplete="new-password"
+          >
+            <template #trailing>
+              <UButton
+                color="neutral"
+                variant="link"
+                :icon="passwordShow ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+                :aria-label="passwordShow ? 'Hide password' : 'Show password'"
+                :aria-pressed="passwordShow"
+                aria-controls="password"
+                class="cursor-pointer"
+                @click="passwordShow = !passwordShow"
+              />
+            </template>
+          </UInput>
+        </UFormField>
+        <UFormField
+          label="Confirmar senha"
+          name="confirmPassword"
+          class="w-full"
+        >
+          <UInput
+            v-model="form.confirmPassword"
+            class="w-full"
+            :type="confirmPasswordShow ? 'text' : 'password'"
+            autocomplete="new-password"
+          >
+            <template #trailing>
+              <UButton
+                color="neutral"
+                variant="link"
+                :icon="
+                  confirmPasswordShow ? 'i-lucide-eye-off' : 'i-lucide-eye'
+                "
+                :aria-label="
+                  confirmPasswordShow ? 'Hide password' : 'Show password'
+                "
+                :aria-pressed="confirmPasswordShow"
+                aria-controls="password"
+                class="cursor-pointer"
+                @click="confirmPasswordShow = !confirmPasswordShow"
+              />
+            </template>
+          </UInput>
+        </UFormField>
 
-        <div>
-          <UFormGroup label="Email" name="email">
-            <UInput
-              v-model="form.email"
-              type="email"
-              placeholder="seu@email.com"
-              required
-              autocomplete="email"
-            />
-          </UFormGroup>
-        </div>
-
-        <div>
-          <UFormGroup label="Senha" name="password">
-            <UInput
-              v-model="form.password"
-              type="password"
-              placeholder="Sua senha"
-              required
-              autocomplete="new-password"
-            />
-          </UFormGroup>
-        </div>
-
-        <div>
-          <UFormGroup label="Confirmar senha" name="confirmPassword">
-            <UInput
-              v-model="form.confirmPassword"
-              type="password"
-              placeholder="Confirme sua senha"
-              required
-              autocomplete="new-password"
-            />
-          </UFormGroup>
-        </div>
-
-        <div>
-          <UCheckbox
-            v-model="form.acceptTerms"
-            label="Eu aceito os termos de uso e política de privacidade"
-            required
-          />
-        </div>
+        <UCheckbox
+          v-model="form.acceptTerms"
+          label="Eu aceito os termos de uso e política de privacidade"
+          required
+        />
 
         <UButton
           type="submit"
@@ -160,19 +170,9 @@ const handleRegister = async () => {
           :disabled="loading || !form.acceptTerms"
           class="w-full"
           size="lg"
-        >
-          {{ loading ? "Criando conta..." : "Criar conta" }}
-        </UButton>
-      </form>
+          label="Criar conta"
+        />
+      </UForm>
     </UCard>
-
-    <div v-if="error" class="mt-4">
-      <UAlert
-        :title="error"
-        color="error"
-        variant="soft"
-        icon="i-heroicons-exclamation-triangle"
-      />
-    </div>
   </div>
 </template>
